@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Jejak.in - Menyingkap Misteri</title>
+  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="/styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Inter:wght@400;500;600&family=Patrick+Hand&family=Permanent+Marker&family=Special+Elite&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Landscape Guard -->
+  <div id="landscape-guard" class="hidden">
+    <div class="guard-content">
+      <div class="rotate-icon">🔄</div>
+      <p>Putar perangkat ke mode landscape untuk menggunakan Jejak.in.</p>
+    </div>
+  </div>
+
+  <!-- Landing Page -->
+  <div id="landing-page">
+    <div class="landing-content">
+      <h1 class="logo">Jejak.in</h1>
+      <p class="tagline">Menyingkap misteri di balik setiap jejak.</p>
+      <p class="desc">Susun clue, tandai lokasi, hubungkan benang merah, dan lihat kemungkinan cerita di balik sebuah misteri.</p>
+      
+      <div class="mode-selection">
+        <div class="mode-card" data-mode="mystery" tabindex="0" role="button" aria-label="Mystery Mode">
+          <div class="mode-icon folder-icon">📁</div>
+          <h2>Mystery Mode</h2>
+          <p>Berkas investigasi fiktif dengan AI Analysis</p>
+        </div>
+        <div class="mode-card" data-mode="fun" tabindex="0" role="button" aria-label="Fun Mode">
+          <div class="mode-icon scrapbook-icon">📔</div>
+          <h2>Fun Mode</h2>
+          <p>Album foto, scrapbook, dan catatan perjalanan</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Analysis Room -->
+  <div id="analysis-room" class="hidden">
+    <div id="game-scene">
+      <img src="assets/images/bg-jj.png" class="scene-layer scene-bg" alt="Background" />
+      
+      <button id="guide-btn" title="Panduan" aria-label="Panduan">?</button>
+
+      <div id="board-container">
+          <!-- Location Search -->
+          <div id="location-search-panel" class="mystery-only" style="z-index: 100;">
+            <button id="toggle-search-btn" aria-label="Toggle Search">🔍</button>
+            <div class="search-content hidden">
+              <input type="text" id="loc-search-input" placeholder="Cari lokasi...">
+              <button id="loc-search-btn">Cari</button>
+              <button id="loc-me-btn" title="Lokasi Saya">📍</button>
+            </div>
+          </div>
+
+          <div id="map-view" class="view-layer active">
+            <div id="map"></div>
+            <!-- SVG Overlay for Red Threads -->
+            <svg id="thread-layer" class="drawing-layer" xmlns="http://www.w3.org/2000/svg"></svg>
+          </div>
+          
+          <div id="timeline-view" class="view-layer hidden">
+            <div id="timeline-container">
+              <div class="timeline-imprecise">
+                <h3>Waktu tidak presisi</h3>
+                <div id="timeline-imprecise-list" class="timeline-row"></div>
+              </div>
+              <div id="timeline-track"></div>
+            </div>
+          </div>
+
+          <!-- Decoration Canvas & Container -->
+          <canvas id="doodle-canvas" class="drawing-layer"></canvas>
+          <div id="decoration-layer" class="drawing-layer"></div>
+
+          <!-- Empty State -->
+          <div id="empty-state">
+            <p>Belum ada jejak. Tempel clue pertamamu di papan.</p>
+          </div>
+      </div>
+
+      <img src="assets/images/frame-jj.png" class="scene-layer scene-frame" alt="Frame" />
+
+      <!-- UI Tools Stack -->
+      <div class="tools-stack" id="toolbox">
+        <!-- Kamera -->
+        <div class="tool-container">
+          <img src="assets/images/camera-jj.png" class="scene-layer tool-img" alt="Camera" />
+          <div class="hitbox tool-item" id="tool-screenshot" style="left:1.78%; top:69.99%; width:21.29%; height:24.09%;">
+            <span class="tool-label">Foto</span>
+          </div>
+        </div>
+        <!-- Arsip -->
+        <div class="tool-container">
+          <img src="assets/images/disket-jj.png" class="scene-layer tool-img" alt="Archive" />
+          <div class="hitbox tool-item" id="tool-archive" style="left:37.03%; top:89.26%; width:8.98%; height:9.77%;">
+            <span class="tool-label">Arsip</span>
+          </div>
+        </div>
+        <!-- Home -->
+        <div class="tool-container">
+          <img src="assets/images/home-jj.png" class="scene-layer tool-img" alt="Home" />
+          <div class="hitbox tool-item" id="tool-home" style="left:87.28%; top:12.89%; width:12.68%; height:87.04%;">
+            <span class="tool-label">Home</span>
+          </div>
+        </div>
+        <!-- Clue -->
+        <div class="tool-container">
+          <img src="assets/images/sticky-notes-jj.png" class="scene-layer tool-img" alt="Clue" />
+          <div class="hitbox tool-item" id="tool-clue" style="left:14.50%; top:6.45%; width:14.14%; height:24.48%;">
+            <span class="tool-label">Clue</span>
+          </div>
+        </div>
+        <!-- Benang -->
+        <div class="tool-container">
+          <img src="assets/images/red_thread-jj.png" class="scene-layer tool-img" alt="Thread" />
+          <div class="hitbox tool-item" id="tool-thread" style="left:2.36%; top:68.23%; width:5.45%; height:15.43%;">
+            <span class="tool-label">Benang</span>
+          </div>
+        </div>
+        <!-- Lokasi -->
+        <div class="tool-container mystery-only-inline">
+          <img src="assets/images/location-jj.png" class="scene-layer tool-img mystery-only-img" alt="Location" />
+          <div class="hitbox tool-item mystery-only" id="tool-location" style="left:0.07%; top:20.96%; width:10.94%; height:27.60%;">
+            <span class="tool-label">Lokasi</span>
+          </div>
+        </div>
+        <!-- Tokoh -->
+        <div class="tool-container mystery-only-inline">
+          <img src="assets/images/people-jj.png" class="scene-layer tool-img mystery-only-img" alt="Characters" />
+          <div class="hitbox tool-item mystery-only" id="tool-character" style="left:16.06%; top:74.22%; width:23.00%; height:25.72%;">
+            <span class="tool-label">Tokoh</span>
+          </div>
+        </div>
+        <!-- Analisis AI -->
+        <div class="tool-container mystery-only-inline">
+          <img src="assets/images/magnifying_glass-jj.png" class="scene-layer tool-img mystery-only-img" alt="AI" />
+          <div class="hitbox tool-item mystery-only" id="tool-ai" style="left:11.77%; top:84.83%; width:12.79%; height:13.28%;">
+            <span class="tool-label">Analisis AI</span>
+          </div>
+        </div>
+        <!-- Dekorasi -->
+        <div class="tool-container">
+          <img src="assets/images/pallet-jj.png" class="scene-layer tool-img" alt="Decoration" />
+          <div class="hitbox tool-item" id="tool-decoration" style="left:39.90%; top:75.13%; width:10.68%; height:14.06%;">
+            <span class="tool-label">Dekorasi</span>
+          </div>
+        </div>
+        <!-- Reset -->
+        <div class="tool-container">
+          <img src="assets/images/eraser-jj.png" class="scene-layer tool-img" alt="Reset" />
+          <div class="hitbox tool-item" id="tool-reset" style="left:60.03%; top:67.97%; width:9.77%; height:8.33%;">
+            <span class="tool-label">Reset</span>
+          </div>
+        </div>
+        <!-- Mode Timeline -->
+        <div class="tool-container">
+          <img src="assets/images/mode_timeline-jj.png" class="scene-layer mode-img" alt="Timeline Mode" />
+          <div class="hitbox" id="toggle-timeline-btn" style="left:17.51%; top:37.11%; width:2.98%; height:16.67%;">
+            <!-- No label -->
+          </div>
+        </div>
+        <!-- Mode Peta -->
+        <div class="tool-container">
+          <img src="assets/images/mode_peta-jj.png" class="scene-layer mode-img" alt="Map Mode" />
+          <div class="hitbox" id="toggle-map-btn" style="left:16.82%; top:54.43%; width:3.31%; height:13.61%;">
+            <!-- No label -->
+          </div>
+        </div>
+
+        <div class="disclaimer mystery-only" style="position: absolute; bottom: 2%; left: 50%; transform: translateX(-50%); font-size: 0.8vw; color: rgba(255,255,255,0.7); text-align: center; pointer-events: none;">
+          Jejak.in adalah aplikasi kreatif untuk simulasi, bukan alat investigasi hukum sungguhan.
+        </div>
+      </div>
+
+      <!-- Decoration Panel Overlay -->
+      <div id="decoration-panel" class="hidden">
+         <button class="panel-close-btn">&times;</button>
+           <h3>Alat Dekorasi</h3>
+           <div class="dec-tools">
+             <button id="dec-text-btn">📝 Teks</button>
+             <button id="dec-sticker-btn">🌟 Sticker</button>
+             <button id="dec-doodle-btn">🖍️ Doodle</button>
+             <button id="dec-eraser-btn" title="Hanya menghapus dekorasi">🧽 Penghapus</button>
+             <button id="dec-clear-doodle-btn" class="hidden">Hapus Doodle</button>
+           </div>
+           <!-- Dynamic Options Container -->
+           <div id="dec-options" class="hidden"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modals -->
+  <div id="modal-container" class="hidden">
+    <div class="modal-backdrop"></div>
+    
+    <!-- Guide Modal -->
+    <div id="guide-modal" class="modal-content window-style hidden guide-style">
+      <div class="modal-header">
+        <h2>Panduan Jejak.in</h2>
+        <button class="close-modal">&times;</button>
+      </div>
+      <div class="modal-body guide-body">
+        <div class="guide-sidebar">
+          <ul id="guide-menu">
+            <li><button class="guide-menu-btn active" data-file="apa-itu-jejakin.md">Apa itu Jejak.in?</button></li>
+            <li><button class="guide-menu-btn" data-file="mode.md">Mode Permainan</button></li>
+            <li><button class="guide-menu-btn" data-file="tutorial.md">Tutorial Dasar</button></li>
+            <li><button class="guide-menu-btn" data-file="fitur.md">Referensi Fitur</button></li>
+            <li><button class="guide-menu-btn" data-file="credits.md">Credits</button></li>
+          </ul>
+        </div>
+        <div class="guide-content-wrapper">
+          <div id="guide-content" class="markdown-body">
+            Memuat panduan...
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Clue Modal -->
+    <div id="clue-modal" class="modal-content window-style hidden">
+      <div class="modal-header">
+        <h2 id="clue-modal-title">Tambah Jejak</h2>
+        <button class="close-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="clue-form">
+          <input type="hidden" id="clue-id">
+          
+          <div class="form-group">
+            <label>Judul <span class="req">*</span></label>
+
+            <input type="text" id="clue-title" required autocomplete="off">
+          </div>
+          
+          <div class="form-group">
+            <label>Deskripsi <span class="mystery-only hint">(Gunakan @tokoh #lokasi)</span></label>
+            <div class="desc-editor-container">
+              <div id="clue-desc-highlight" aria-hidden="true"></div>
+              <textarea id="clue-desc" rows="4"></textarea>
+              <div id="tag-autocomplete" class="hidden"></div>
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>Tanggal</label>
+              <input type="date" id="clue-date">
+            </div>
+            <div class="form-group">
+              <label>Jam</label>
+              <input type="time" id="clue-time">
+            </div>
+          </div>
+          
+          <div class="form-group mystery-only">
+            <label>Lokasi Terdaftar</label>
+            <select id="clue-location"></select>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>Latitude</label>
+              <input type="number" step="any" id="clue-lat" required>
+            </div>
+            <div class="form-group">
+              <label>Longitude</label>
+              <input type="number" step="any" id="clue-lng" required>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>Foto Lampiran</label>
+            <input type="file" id="clue-image" accept="image/*">
+            <div id="clue-image-preview"></div>
+          </div>
+          
+          <div class="modal-actions">
+            <button type="button" id="clue-delete-btn" class="danger-btn hidden">Hapus Clue</button>
+            <div class="flex-spacer"></div>
+            <button type="button" class="cancel-modal">Batal</button>
+            <button type="submit" class="primary-btn">Simpan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Generic List Modal (for Locations & Characters) -->
+    <div id="list-modal" class="modal-content window-style hidden">
+      <div class="modal-header">
+        <h2 id="list-modal-title">Daftar</h2>
+        <button class="close-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <button id="add-list-item-btn" class="primary-btn mb-4">+ Tambah Baru</button>
+        <div id="list-container" class="list-cards"></div>
+      </div>
+    </div>
+
+    <!-- Location Form Modal -->
+    <div id="location-modal" class="modal-content window-style hidden">
+      <div class="modal-header">
+        <h2 id="location-modal-title">Form Lokasi</h2>
+        <button class="close-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="location-form">
+          <input type="hidden" id="loc-id">
+          <div class="form-group">
+            <label>Nama Lokasi <span class="req">*</span></label>
+            <input type="text" id="loc-name" required autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label>Deskripsi</label>
+            <textarea id="loc-desc" rows="3"></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Latitude</label>
+              <input type="number" step="any" id="loc-lat">
+            </div>
+            <div class="form-group">
+              <label>Longitude</label>
+              <input type="number" step="any" id="loc-lng">
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button type="button" id="loc-delete-btn" class="danger-btn hidden">Hapus</button>
+            <div class="flex-spacer"></div>
+            <button type="button" class="cancel-modal">Batal</button>
+            <button type="submit" class="primary-btn">Simpan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Character Form Modal -->
+    <div id="character-modal" class="modal-content window-style hidden">
+      <div class="modal-header">
+        <h2 id="character-modal-title">Form Tokoh</h2>
+        <button class="close-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="character-form">
+          <input type="hidden" id="char-id">
+          <div class="form-group">
+            <label>Nama Tokoh <span class="req">*</span></label>
+            <input type="text" id="char-name" required autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label>Deskripsi</label>
+            <textarea id="char-desc" rows="2"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Karakteristik</label>
+            <textarea id="char-chars" rows="2" placeholder="Tenang, rapi..."></textarea>
+          </div>
+          <div class="modal-actions">
+            <button type="button" id="char-delete-btn" class="danger-btn hidden">Hapus</button>
+            <div class="flex-spacer"></div>
+            <button type="button" class="cancel-modal">Batal</button>
+            <button type="submit" class="primary-btn">Simpan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Thread Connection Modal -->
+    <div id="thread-modal" class="modal-content window-style hidden">
+      <div class="modal-header">
+        <h2>Hubungkan Clue</h2>
+        <button class="close-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="thread-form">
+          <input type="hidden" id="thread-id">
+          <p id="thread-clues-info" class="mb-4 text-sm"></p>
+          <div class="form-group mystery-only">
+            <label>Keterkaitan/Hubungan (opsional)</label>
+            <input type="text" id="thread-desc" placeholder="kemungkinan ada hubungan" autocomplete="off">
+          </div>
+          <div class="form-group mystery-only">
+            <label>Tipe Hubungan</label>
+            <select id="thread-type">
+              <option value="possible_connection">Possible Connection</option>
+              <option value="cause_effect">Cause and Effect</option>
+              <option value="contradiction">Contradiction</option>
+              <option value="motive">Motive</option>
+              <option value="alibi">Alibi</option>
+              <option value="same_person">Same Person</option>
+              <option value="same_location">Same Location</option>
+            </select>
+          </div>
+          <div class="modal-actions">
+            <button type="button" id="thread-delete-btn" class="danger-btn hidden">Putus Hubungan</button>
+            <div class="flex-spacer"></div>
+            <button type="button" class="cancel-modal">Batal</button>
+            <button type="submit" class="primary-btn">Simpan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- AI Request Modal -->
+    <div id="ai-req-modal" class="modal-content window-style hidden">
+      <div class="modal-header">
+        <h2>Detective Analysis</h2>
+        <button class="close-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="ai-req-form">
+          <div class="form-group">
+            <label>Judul Kasus <span class="req">*</span></label>
+            <input type="text" id="ai-case-title" required autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label>Pertanyaan Utama <span class="req">*</span></label>
+            <textarea id="ai-case-q" rows="3" required placeholder="Siapa yang mengambil permata itu?"></textarea>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="cancel-modal">Batal</button>
+            <button type="submit" class="primary-btn" id="ai-submit-btn">Analisis Sekarang</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- AI Report Modal -->
+    <div id="ai-report-modal" class="modal-content window-style report-style hidden">
+      <div class="modal-header">
+        <h2>Laporan Analisis Jejak.in</h2>
+        <button class="close-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="ai-report-content" class="markdown-body"></div>
+        <div class="modal-actions mt-4">
+          <button type="button" id="ai-copy-btn">Copy Text</button>
+          <button type="button" id="ai-download-btn">Download .txt</button>
+          <div class="flex-spacer"></div>
+          <button type="button" class="primary-btn close-modal">Tutup</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Archive / JSON Modal -->
+    <div id="archive-modal" class="modal-content window-style hidden">
+      <div class="modal-header">
+        <h2>Arsip (Import / Export)</h2>
+        <button class="close-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="archive-actions">
+          <div class="archive-panel">
+            <h3>Export Data</h3>
+            <p class="text-sm mb-4">Simpan seluruh keadaan papan ke file JSON.</p>
+            <button id="export-json-btn" class="primary-btn w-full">Export .json</button>
+          </div>
+          <div class="archive-panel">
+            <h3>Import Data</h3>
+            <p class="text-sm mb-4">Muat keadaan papan dari file JSON.</p>
+            <input type="file" id="import-json-input" accept=".json" class="hidden">
+            <button id="import-json-btn" class="secondary-btn w-full">Pilih File .json</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Dynamic Confirm Modal -->
+    <div id="confirm-modal" class="modal-content window-style hidden" style="max-width: 400px; text-align: center;">
+      <h3 id="confirm-title" style="margin-top: 0;">Konfirmasi</h3>
+      <p id="confirm-message" style="margin: 1.5rem 0;">Apakah Anda yakin?</p>
+      <div style="display: flex; gap: 1rem; justify-content: center;">
+        <button id="confirm-cancel-btn" class="secondary-btn">Batal</button>
+        <button id="confirm-ok-btn" class="danger-btn" style="background:#cc0000; border:1px solid #ff4444; color:white; padding:0.5rem 1rem; border-radius:4px; font-weight:bold; cursor:pointer;">Ya, Lanjutkan</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+  <!-- Load Markdown parser as a small lib for AI report -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
